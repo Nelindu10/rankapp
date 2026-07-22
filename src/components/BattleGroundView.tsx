@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Rank, LogItem, QuestItem } from '../types';
-import { TASK_CATEGORIES } from '../constants';
 
 interface BattleGroundViewProps {
   currentRank: Rank;
@@ -20,6 +19,10 @@ interface BattleGroundViewProps {
   setActiveObjective: (obj: string) => void;
   taskCategory: string;
   setTaskCategory: (cat: string) => void;
+  categories: string[];
+  onAddCategory: (newCategory: string) => void;
+  onEditCategory: (oldCategory: string, newCategory: string) => void;
+  onDeleteCategory: (categoryToDelete: string) => void;
   onLogStopwatchSession?: () => void;
   logs: LogItem[];
   quests: QuestItem[];
@@ -44,6 +47,10 @@ export const BattleGroundView: React.FC<BattleGroundViewProps> = ({
   setActiveObjective,
   taskCategory,
   setTaskCategory,
+  categories,
+  onAddCategory,
+  onEditCategory,
+  onDeleteCategory,
   onLogStopwatchSession,
   logs,
   quests,
@@ -51,6 +58,14 @@ export const BattleGroundView: React.FC<BattleGroundViewProps> = ({
 }) => {
   const [isEditingObjective, setIsEditingObjective] = useState(false);
   const [tempObjective, setTempObjective] = useState(activeObjective);
+
+  // Category Manager Modal state
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [newCatInput, setNewCatInput] = useState('');
+  const [editingCategory, setEditingCategory] = useState<string | null>(null);
+  const [editCatInput, setEditCatInput] = useState('');
+  const [isQuickAdding, setIsQuickAdding] = useState(false);
+  const [quickAddInput, setQuickAddInput] = useState('');
 
   // Formatting times
   const formatTime = () => {
@@ -190,29 +205,88 @@ export const BattleGroundView: React.FC<BattleGroundViewProps> = ({
           )}
         </div>
 
-        {/* Quick Category Chips / Pills */}
-        <div className="pt-2 border-t border-[#3d494c]/40 flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
+        {/* Quick Category Chips / Pills & Management */}
+        <div className="pt-2 border-t border-[#3d494c]/40 flex flex-wrap items-center gap-2">
           <span className="text-[10px] font-mono-data uppercase text-[#bcc9cd] tracking-wider shrink-0 mr-1">
             Category:
           </span>
-          {TASK_CATEGORIES.map((cat) => (
+
+          <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1 max-w-full">
+            {categories.map((cat) => (
+              <button
+                key={cat}
+                onClick={() => {
+                  setTaskCategory(cat);
+                  if (!activeObjective || activeObjective === 'General Tactical Study' || activeObjective === 'General Focus') {
+                    setActiveObjective(`${cat} Session`);
+                  }
+                }}
+                className={`px-3 py-1 rounded-lg text-xs font-mono-data transition-all cursor-pointer shrink-0 ${
+                  taskCategory === cat
+                    ? 'bg-[#06b6d4] text-black font-extrabold shadow-[0_0_10px_rgba(76,215,246,0.6)]'
+                    : 'bg-[#201f21] text-[#bcc9cd] border border-[#3d494c]/60 hover:text-white hover:border-[#4cd7f6]/50'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+
+            {/* Inline Quick Add Category Button / Form */}
+            {isQuickAdding ? (
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  if (quickAddInput.trim()) {
+                    onAddCategory(quickAddInput.trim());
+                    setQuickAddInput('');
+                  }
+                  setIsQuickAdding(false);
+                }}
+                className="flex items-center gap-1 shrink-0"
+              >
+                <input
+                  type="text"
+                  value={quickAddInput}
+                  onChange={(e) => setQuickAddInput(e.target.value)}
+                  placeholder="New category..."
+                  className="bg-[#0e0e10] border border-[#4cd7f6] rounded-lg px-2.5 py-0.5 text-xs text-[#e5e1e4] focus:outline-none w-28"
+                  autoFocus
+                />
+                <button
+                  type="submit"
+                  className="p-1 text-[#4cd7f6] hover:text-white bg-[#06b6d4]/20 rounded cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">check</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsQuickAdding(false)}
+                  className="p-1 text-[#bcc9cd] hover:text-white cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-sm">close</span>
+                </button>
+              </form>
+            ) : (
+              <button
+                onClick={() => setIsQuickAdding(true)}
+                className="px-2.5 py-1 bg-[#201f21] hover:bg-[#3d494c]/50 text-[#4cd7f6] border border-[#4cd7f6]/40 rounded-lg text-xs font-mono-data flex items-center gap-1 shrink-0 cursor-pointer transition-all"
+                title="Quick Add Category"
+              >
+                <span className="material-symbols-outlined text-sm">add</span>
+                <span>ADD</span>
+              </button>
+            )}
+
+            {/* Manage Categories Modal Button */}
             <button
-              key={cat}
-              onClick={() => {
-                setTaskCategory(cat);
-                if (!activeObjective || activeObjective === 'General Tactical Study' || activeObjective === 'General Focus') {
-                  setActiveObjective(`${cat} Session`);
-                }
-              }}
-              className={`px-3 py-1 rounded-lg text-xs font-mono-data transition-all cursor-pointer shrink-0 ${
-                taskCategory === cat
-                  ? 'bg-[#06b6d4] text-black font-extrabold shadow-[0_0_10px_rgba(76,215,246,0.6)]'
-                  : 'bg-[#201f21] text-[#bcc9cd] border border-[#3d494c]/60 hover:text-white hover:border-[#4cd7f6]/50'
-              }`}
+              onClick={() => setIsCategoryModalOpen(true)}
+              className="px-2.5 py-1 bg-[#4cd7f6]/10 hover:bg-[#4cd7f6]/20 border border-[#4cd7f6]/40 text-[#4cd7f6] rounded-lg text-xs font-mono-data font-bold transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+              title="Manage Categories"
             >
-              {cat}
+              <span className="material-symbols-outlined text-sm">settings</span>
+              <span>MANAGE</span>
             </button>
-          ))}
+          </div>
         </div>
       </div>
 
@@ -485,6 +559,148 @@ export const BattleGroundView: React.FC<BattleGroundViewProps> = ({
           "{currentQuote}"
         </p>
       </div>
+
+      {/* Category Management Modal */}
+      {isCategoryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="glass-panel p-6 rounded-2xl max-w-lg w-full border border-[#4cd7f6]/40 shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto custom-scrollbar">
+            <div className="flex justify-between items-center border-b border-[#3d494c]/40 pb-3">
+              <h3 className="font-display text-xl text-[#4cd7f6] flex items-center gap-2">
+                <span className="material-symbols-outlined">category</span>
+                MANAGE CATEGORIES
+              </h3>
+              <button
+                onClick={() => {
+                  setIsCategoryModalOpen(false);
+                  setEditingCategory(null);
+                }}
+                className="text-[#bcc9cd] hover:text-white cursor-pointer"
+              >
+                <span className="material-symbols-outlined">close</span>
+              </button>
+            </div>
+
+            {/* Add New Category Form */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (newCatInput.trim()) {
+                  onAddCategory(newCatInput.trim());
+                  setNewCatInput('');
+                }
+              }}
+              className="flex gap-2"
+            >
+              <input
+                type="text"
+                value={newCatInput}
+                onChange={(e) => setNewCatInput(e.target.value)}
+                placeholder="Enter new category name (e.g. Fitness, Assignment)..."
+                className="flex-1 bg-[#0e0e10] border border-[#3d494c] focus:border-[#4cd7f6] rounded-lg px-3 py-2 text-sm text-[#e5e1e4] focus:outline-none"
+              />
+              <button
+                type="submit"
+                className="px-4 py-2 bg-[#06b6d4] text-black font-bold text-xs rounded-lg hover:bg-[#4cd7f6] transition-all flex items-center gap-1 shrink-0 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-sm">add</span>
+                <span>ADD</span>
+              </button>
+            </form>
+
+            {/* Category List */}
+            <div className="space-y-2 pt-2">
+              <span className="text-[10px] font-mono-data text-[#bcc9cd] uppercase tracking-wider block">
+                Existing Category Tags ({categories.length})
+              </span>
+
+              {categories.map((cat) => {
+                const isEditing = editingCategory === cat;
+
+                return (
+                  <div
+                    key={cat}
+                    className="p-3 bg-[#0e0e10]/80 rounded-xl border border-[#3d494c]/50 flex items-center justify-between gap-3"
+                  >
+                    {isEditing ? (
+                      <div className="flex items-center gap-2 flex-1">
+                        <input
+                          type="text"
+                          value={editCatInput}
+                          onChange={(e) => setEditCatInput(e.target.value)}
+                          className="flex-1 bg-[#201f21] border border-[#4cd7f6] rounded px-2.5 py-1 text-xs text-[#e5e1e4] focus:outline-none"
+                          autoFocus
+                        />
+                        <button
+                          onClick={() => {
+                            if (editCatInput.trim()) {
+                              onEditCategory(cat, editCatInput.trim());
+                            }
+                            setEditingCategory(null);
+                          }}
+                          className="px-2.5 py-1 bg-[#06b6d4] text-black font-bold text-xs rounded hover:bg-[#4cd7f6] cursor-pointer"
+                        >
+                          SAVE
+                        </button>
+                        <button
+                          onClick={() => setEditingCategory(null)}
+                          className="px-2.5 py-1 bg-[#201f21] text-[#bcc9cd] text-xs rounded hover:text-white cursor-pointer"
+                        >
+                          CANCEL
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="font-bold text-sm text-[#e5e1e4] truncate">{cat}</span>
+                          {taskCategory === cat && (
+                            <span className="text-[9px] font-mono-data bg-[#06b6d4]/20 border border-[#4cd7f6] text-[#4cd7f6] px-2 py-0.5 rounded">
+                              ACTIVE
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => {
+                              setEditingCategory(cat);
+                              setEditCatInput(cat);
+                            }}
+                            className="p-1.5 text-[#bcc9cd] hover:text-[#4cd7f6] transition-colors cursor-pointer"
+                            title="Edit Category Name"
+                          >
+                            <span className="material-symbols-outlined text-base">edit</span>
+                          </button>
+                          <button
+                            onClick={() => onDeleteCategory(cat)}
+                            disabled={categories.length <= 1}
+                            className={`p-1.5 transition-colors cursor-pointer ${
+                              categories.length <= 1
+                                ? 'text-[#3d494c] cursor-not-allowed'
+                                : 'text-[#bcc9cd] hover:text-[#ffb4ab]'
+                            }`}
+                            title={categories.length <= 1 ? 'Cannot delete sole category' : 'Delete Category'}
+                          >
+                            <span className="material-symbols-outlined text-base">delete</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="flex justify-end pt-3 border-t border-[#3d494c]/40">
+              <button
+                onClick={() => setIsCategoryModalOpen(false)}
+                className="px-4 py-2 bg-[#201f21] text-[#e5e1e4] border border-[#3d494c] rounded-lg text-xs font-bold hover:bg-[#3d494c]/50 cursor-pointer"
+              >
+                DONE
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

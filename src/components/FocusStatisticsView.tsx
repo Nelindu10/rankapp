@@ -3,6 +3,7 @@ import { FocusSessionLog } from '../types';
 
 interface FocusStatisticsViewProps {
   sessionLogs: FocusSessionLog[];
+  categories?: string[];
   onDeleteLog?: (id: string) => void;
   onClearLogs?: () => void;
   onAddLog?: (log: Omit<FocusSessionLog, 'id'>) => void;
@@ -21,10 +22,30 @@ const CATEGORY_COLORS: Record<string, { bg: string; border: string; text: string
   'Unclassified': { bg: 'bg-[#94a3b8]/20', border: 'border-[#94a3b8]', text: 'text-[#cbd5e1]', hex: '#94a3b8' },
 };
 
-const DEFAULT_COLOR = { bg: 'bg-[#a855f7]/20', border: 'border-[#a855f7]', text: 'text-[#c084fc]', hex: '#a855f7' };
+const COLOR_PALETTE = [
+  { bg: 'bg-[#4cd7f6]/20', border: 'border-[#4cd7f6]', text: 'text-[#4cd7f6]', hex: '#4cd7f6' },
+  { bg: 'bg-[#a855f7]/20', border: 'border-[#a855f7]', text: 'text-[#c084fc]', hex: '#a855f7' },
+  { bg: 'bg-[#10b981]/20', border: 'border-[#10b981]', text: 'text-[#34d399]', hex: '#10b981' },
+  { bg: 'bg-[#f59e0b]/20', border: 'border-[#f59e0b]', text: 'text-[#fbbf24]', hex: '#f59e0b' },
+  { bg: 'bg-[#f43f5e]/20', border: 'border-[#f43f5e]', text: 'text-[#fb7185]', hex: '#f43f5e' },
+  { bg: 'bg-[#06b6d4]/20', border: 'border-[#06b6d4]', text: 'text-[#22d3ee]', hex: '#06b6d4' },
+  { bg: 'bg-[#ec4899]/20', border: 'border-[#ec4899]', text: 'text-[#f472b6]', hex: '#ec4899' },
+  { bg: 'bg-[#e9c400]/20', border: 'border-[#e9c400]', text: 'text-[#fef08a]', hex: '#e9c400' },
+];
+
+const getCategoryColor = (catName: string) => {
+  if (CATEGORY_COLORS[catName]) return CATEGORY_COLORS[catName];
+  let hash = 0;
+  for (let i = 0; i < catName.length; i++) {
+    hash = catName.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  const index = Math.abs(hash) % COLOR_PALETTE.length;
+  return COLOR_PALETTE[index];
+};
 
 export const FocusStatisticsView: React.FC<FocusStatisticsViewProps> = ({
   sessionLogs,
+  categories,
   onDeleteLog,
   onClearLogs,
   onAddLog,
@@ -102,7 +123,7 @@ export const FocusStatisticsView: React.FC<FocusStatisticsViewProps> = ({
     const strokeDashoffset = -((cumulativePercent / 100) * circumference);
     cumulativePercent += percentage;
 
-    const color = CATEGORY_COLORS[task.category] || CATEGORY_COLORS[task.name] || DEFAULT_COLOR;
+    const color = getCategoryColor(task.category || task.name);
 
     return {
       ...task,
@@ -290,8 +311,8 @@ export const FocusStatisticsView: React.FC<FocusStatisticsViewProps> = ({
           {totalMinutes === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-center">
               <span className="material-symbols-outlined text-4xl text-[#3d494c] mb-2">donut_large</span>
-              <p className="text-sm text-[#869397]">No focus sessions recorded in this period.</p>
-              <p className="text-xs text-[#bcc9cd] mt-1">Start the timer to log tactical data!</p>
+              <p className="text-sm font-bold text-[#e5e1e4]">No focus sessions logged yet.</p>
+              <p className="text-xs text-[#bcc9cd] mt-1">Start a timer or log a session to see stats!</p>
             </div>
           ) : (
             <div className="flex flex-col items-center my-2">
@@ -392,7 +413,7 @@ export const FocusStatisticsView: React.FC<FocusStatisticsViewProps> = ({
             <div className="space-y-4">
               {taskList.map((task, index) => {
                 const pct = totalMinutes > 0 ? (task.duration / totalMinutes) * 100 : 0;
-                const styleColor = CATEGORY_COLORS[task.category] || CATEGORY_COLORS[task.name] || DEFAULT_COLOR;
+                const styleColor = getCategoryColor(task.category || task.name);
 
                 return (
                   <div
@@ -551,7 +572,7 @@ export const FocusStatisticsView: React.FC<FocusStatisticsViewProps> = ({
               </thead>
               <tbody className="divide-y divide-[#3d494c]/30">
                 {filteredLogs.map((log) => {
-                  const styleColor = CATEGORY_COLORS[log.category] || DEFAULT_COLOR;
+                  const styleColor = getCategoryColor(log.category);
                   const startDate = new Date(log.startTime);
                   const endDate = new Date(log.endTime || log.startTime + log.durationMinutes * 60 * 1000);
 
@@ -643,13 +664,11 @@ export const FocusStatisticsView: React.FC<FocusStatisticsViewProps> = ({
                   onChange={(e) => setNewCategory(e.target.value)}
                   className="w-full bg-[#0e0e10] border border-[#3d494c] focus:border-[#4cd7f6] rounded-lg px-3 py-2 text-sm text-[#e5e1e4] focus:outline-none"
                 >
-                  <option value="Deep Work">Deep Work</option>
-                  <option value="Coding">Coding</option>
-                  <option value="Reading">Reading</option>
-                  <option value="Clean room">Clean room</option>
-                  <option value="Mathematics">Mathematics</option>
-                  <option value="General Focus">General Focus</option>
-                  <option value="Unclassified">Unclassified</option>
+                  {(categories && categories.length > 0 ? categories : Object.keys(CATEGORY_COLORS)).map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
                 </select>
               </div>
 

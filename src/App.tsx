@@ -18,6 +18,7 @@ import {
   INITIAL_SQUAD_MEMBERS,
   INITIAL_FOCUS_LOGS,
   MOTIVATIONAL_QUOTES,
+  TASK_CATEGORIES,
 } from './constants';
 import { Rank, ArmoryItem, QuestItem, LogItem, AppSettings, FocusSessionLog, TabType } from './types';
 import {
@@ -94,7 +95,28 @@ export default function App() {
   // Focus Session History State
   const [sessionLogs, setSessionLogs] = useState<FocusSessionLog[]>(() => {
     const saved = localStorage.getItem('study_focus_history');
-    return saved ? JSON.parse(saved) : INITIAL_FOCUS_LOGS;
+    if (!saved) return [];
+    try {
+      const parsed: FocusSessionLog[] = JSON.parse(saved);
+      // Clean out any previously saved mock data
+      return parsed.filter((l) => !['f1', 'f2', 'f3', 'f4', 'f5', 'f6'].includes(l.id));
+    } catch {
+      return [];
+    }
+  });
+
+  // Custom Categories State
+  const [categories, setCategories] = useState<string[]>(() => {
+    const saved = localStorage.getItem('study_categories');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      } catch {
+        // fallback
+      }
+    }
+    return TASK_CATEGORIES;
   });
 
   const [taskCategory, setTaskCategory] = useState<string>(() => {
@@ -106,7 +128,7 @@ export default function App() {
   const [timeLeft, setTimeLeft] = useState<number>(settings.pomodoroMinutes * 60);
   const [stopwatchTime, setStopwatchTime] = useState<number>(0);
   const [isRunning, setIsRunning] = useState<boolean>(false);
-  const [activeObjective, setActiveObjective] = useState<string>('Quantum Physics & Algorithmic Analysis');
+  const [activeObjective, setActiveObjective] = useState<string>('General Focus');
 
   // Modals & Sound
   const [levelUpModal, setLevelUpModal] = useState<{ isOpen: boolean; rank: Rank | null }>({
@@ -156,6 +178,42 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('study_task_category', taskCategory);
   }, [taskCategory]);
+
+  useEffect(() => {
+    localStorage.setItem('study_categories', JSON.stringify(categories));
+  }, [categories]);
+
+  // Category mutation handlers
+  const handleAddCategory = (newCat: string) => {
+    const trimmed = newCat.trim();
+    if (!trimmed) return;
+    if (categories.some((c) => c.toLowerCase() === trimmed.toLowerCase())) return;
+    setCategories((prev) => [...prev, trimmed]);
+    setTaskCategory(trimmed);
+    addLog(`Added new focus category: ${trimmed}`, 'info');
+  };
+
+  const handleEditCategory = (oldCat: string, newCat: string) => {
+    const trimmed = newCat.trim();
+    if (!trimmed || oldCat === trimmed) return;
+    setCategories((prev) => prev.map((c) => (c === oldCat ? trimmed : c)));
+    if (taskCategory === oldCat) {
+      setTaskCategory(trimmed);
+    }
+    addLog(`Renamed category "${oldCat}" to "${trimmed}"`, 'info');
+  };
+
+  const handleDeleteCategory = (catToDelete: string) => {
+    if (categories.length <= 1) return;
+    setCategories((prev) => {
+      const next = prev.filter((c) => c !== catToDelete);
+      if (taskCategory === catToDelete) {
+        setTaskCategory(next[0] || 'General Focus');
+      }
+      return next;
+    });
+    addLog(`Removed category "${catToDelete}"`, 'info');
+  };
 
   // Ambient sound management
   useEffect(() => {
@@ -471,6 +529,8 @@ export default function App() {
     setArmoryItems(INITIAL_ARMORY_ITEMS);
     setQuests(INITIAL_QUESTS);
     setSessionLogs(INITIAL_FOCUS_LOGS);
+    setCategories(TASK_CATEGORIES);
+    setTaskCategory('Deep Work');
     setLogs([
       {
         id: Date.now().toString(),
@@ -540,6 +600,10 @@ export default function App() {
             setActiveObjective={setActiveObjective}
             taskCategory={taskCategory}
             setTaskCategory={setTaskCategory}
+            categories={categories}
+            onAddCategory={handleAddCategory}
+            onEditCategory={handleEditCategory}
+            onDeleteCategory={handleDeleteCategory}
             onLogStopwatchSession={handleLogStopwatchSession}
             logs={logs}
             quests={quests}
@@ -550,6 +614,7 @@ export default function App() {
         {activeTab === 'analytics' && (
           <FocusStatisticsView
             sessionLogs={sessionLogs}
+            categories={categories}
             onDeleteLog={handleDeleteLog}
             onClearLogs={handleClearLogs}
             onAddLog={handleAddLog}
