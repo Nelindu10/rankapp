@@ -4,6 +4,7 @@ import { TopHeader } from './components/TopHeader';
 import { SideNavBar } from './components/SideNavBar';
 import { BottomNavBar } from './components/BottomNavBar';
 import { BattleGroundView } from './components/BattleGroundView';
+import { FocusStatisticsView } from './components/FocusStatisticsView';
 import { ArmoryView } from './components/ArmoryView';
 import { SquadLeaderboardView } from './components/SquadLeaderboardView';
 import { BarracksView } from './components/BarracksView';
@@ -15,9 +16,10 @@ import {
   INITIAL_ARMORY_ITEMS,
   INITIAL_QUESTS,
   INITIAL_SQUAD_MEMBERS,
+  INITIAL_FOCUS_LOGS,
   MOTIVATIONAL_QUOTES,
 } from './constants';
-import { Rank, ArmoryItem, QuestItem, LogItem, AppSettings } from './types';
+import { Rank, ArmoryItem, QuestItem, LogItem, AppSettings, FocusSessionLog, TabType } from './types';
 import {
   playClickSound,
   playTimerCompleteSound,
@@ -42,7 +44,7 @@ export default function App() {
     return saved ? parseInt(saved, 10) : 1;
   });
 
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'armory' | 'squad' | 'barracks'>('dashboard');
+  const [activeTab, setActiveTab] = useState<TabType>('dashboard');
 
   const [settings, setSettings] = useState<AppSettings>(() => {
     const saved = localStorage.getItem('study_settings');
@@ -89,6 +91,16 @@ export default function App() {
         ];
   });
 
+  // Focus Session History State
+  const [sessionLogs, setSessionLogs] = useState<FocusSessionLog[]>(() => {
+    const saved = localStorage.getItem('study_focus_history');
+    return saved ? JSON.parse(saved) : INITIAL_FOCUS_LOGS;
+  });
+
+  const [taskCategory, setTaskCategory] = useState<string>(() => {
+    return localStorage.getItem('study_task_category') || 'Deep Work';
+  });
+
   // Timer State
   const [timerMode, setTimerMode] = useState<'pomodoro' | 'break' | 'stopwatch'>('pomodoro');
   const [timeLeft, setTimeLeft] = useState<number>(settings.pomodoroMinutes * 60);
@@ -104,7 +116,7 @@ export default function App() {
   const [isAiAdvisorOpen, setIsAiAdvisorOpen] = useState<boolean>(false);
   const [quoteIndex, setQuoteIndex] = useState<number>(0);
 
-  // Sync to local storage
+  // Sync state to local storage
   useEffect(() => {
     localStorage.setItem('study_xp', xp.toString());
   }, [xp]);
@@ -136,6 +148,14 @@ export default function App() {
   useEffect(() => {
     localStorage.setItem('study_logs', JSON.stringify(logs.slice(0, 15)));
   }, [logs]);
+
+  useEffect(() => {
+    localStorage.setItem('study_focus_history', JSON.stringify(sessionLogs));
+  }, [sessionLogs]);
+
+  useEffect(() => {
+    localStorage.setItem('study_task_category', taskCategory);
+  }, [taskCategory]);
 
   // Ambient sound management
   useEffect(() => {
@@ -199,65 +219,137 @@ export default function App() {
     }
   };
 
-  // Timer Tick Interval
+  // Log completed focus session helper
+  const logCompletedSession = (durationSecs: number, mode: 'pomodoro' | 'stopwatch', xpEarned: number) => {
+    if (durationSecs < 10) return;
+    const mins = Math.max(1, Math.round(durationSecs / 60));
+    const start = sessionStartTimeRef.current || (Date.now() - durationSecs * 1000);
+    const newLog: FocusSessionLog = {
+      id: Date.now().toString(),
+      taskName: activeObjective || 'General Focus',
+      category: taskCategory || 'General Focus',
+      startTime: start,
+      endTime: Date.now(),
+      durationMinutes: mins,
+      durationSeconds: durationSecs,
+      earnedXp: xpEarned,
+      mode,
+    };
+    setSessionLogs((prev) => [newLog, ...prev]);
+  };
+
+  // Mobile Background / Screen Sleep Safe Timestamp Timer Refs
   const isRunningRef = useRef(isRunning);
   isRunningRef.current = isRunning;
+
+  const lastTickTimeRef = useRef<number>(Date.now());
+  const sessionStartTimeRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    if (isRunning) {
+      lastTickTimeRef.current = Date.now();
+      sessionStartTimeRef.current = Date.now();
+    }
+  }, [isRunning]);
+
+  // Process Timer Tick Helper (handles time gaps gracefully)
+  const processTimerTick = (elapsedSeconds: number) => {
+    if (elapsedSeconds <= 0) return;
+
+    if (timerMode === 'stopwatch') {
+      setStopwatchTime((prev) => {
+        const next = prev + elapsedSeconds;
+        const prevMins = Math.floor(prev / 60);
+        const nextMins = Math.floor(next / 60);
+        const diffMins = nextMins - prevMins;
+
+        if (diffMins > 0) {
+          setHours((h) => h + diffMins / 60);
+          awardXp(diffMins * 1, `${diffMins} Focus Minute(s) Completed`);
+          updateQuestsProgress(diffMins);
+        }
+        return next;
+      });
+    } else {
+      setTimeLeft((prev) => {
+        if (prev > elapsedSeconds) {
+          const next = prev - elapsedSeconds;
+          const targetSecs = (timerMode === 'pomodoro' ? settings.pomodoroMinutes : settings.breakMinutes) * 60;
+          const elapsedFromStart = targetSecs - next;
+          const prevElapsedFromStart = targetSecs - prev;
+
+          const diffMins = Math.floor(elapsedFromStart / 60) - Math.floor(prevElapsedFromStart / 60);
+          if (timerMode === 'pomodoro' && diffMins > 0) {
+            setHours((h) => h + diffMins / 60);
+            awardXp(diffMins * 1, `${diffMins} Focus Minute(s) Completed`);
+            updateQuestsProgress(diffMins);
+          }
+          return next;
+        } else {
+          // Timer Finished
+          setIsRunning(false);
+
+          if (settings.soundEnabled) {
+            playTimerCompleteSound();
+          }
+
+          if (timerMode === 'pomodoro') {
+            const sessionSecs = settings.pomodoroMinutes * 60;
+            awardXp(10, 'Completed Pomodoro Battle Session!');
+            addLog('Focus Session Complete! Commencing Break.', 'success');
+            logCompletedSession(sessionSecs, 'pomodoro', settings.pomodoroMinutes + 10);
+            setTimerMode('break');
+            return settings.breakMinutes * 60;
+          } else {
+            addLog('Break Over. Deployment Required.', 'info');
+            setTimerMode('pomodoro');
+            return settings.pomodoroMinutes * 60;
+          }
+        }
+      });
+    }
+  };
 
   useEffect(() => {
     let interval: NodeJS.Timeout | null = null;
 
     if (isRunning) {
+      lastTickTimeRef.current = Date.now();
       interval = setInterval(() => {
-        if (timerMode === 'stopwatch') {
-          setStopwatchTime((prev) => {
-            const next = prev + 1;
-            // 1 minute focused in stopwatch = +1 XP & +1/60 hours
-            if (next % 60 === 0) {
-              setHours((h) => h + 1 / 60);
-              awardXp(1, 'Continuous Grind Minute');
-              updateQuestsProgress(1);
-            }
-            return next;
-          });
-        } else {
-          setTimeLeft((prev) => {
-            if (prev > 1) {
-              const next = prev - 1;
-              // 1 minute in pomodoro = +1 XP
-              if (timerMode === 'pomodoro' && (settings.pomodoroMinutes * 60 - next) % 60 === 0) {
-                setHours((h) => h + 1 / 60);
-                awardXp(1, 'Focus Minute Completed');
-                updateQuestsProgress(1);
-              }
-              return next;
-            } else {
-              // Timer Finished
-              setIsRunning(false);
-
-              if (settings.soundEnabled) {
-                playTimerCompleteSound();
-              }
-
-              if (timerMode === 'pomodoro') {
-                awardXp(10, 'Completed Pomodoro Battle Session!');
-                addLog('Focus Session Complete! Commencing Break.', 'success');
-                setTimerMode('break');
-                return settings.breakMinutes * 60;
-              } else {
-                addLog('Break Over. Deployment Required.', 'info');
-                setTimerMode('pomodoro');
-                return settings.pomodoroMinutes * 60;
-              }
-            }
-          });
+        const now = Date.now();
+        const elapsedSeconds = Math.floor((now - lastTickTimeRef.current) / 1000);
+        if (elapsedSeconds >= 1) {
+          lastTickTimeRef.current += elapsedSeconds * 1000;
+          processTimerTick(elapsedSeconds);
         }
-      }, 1000);
+      }, 500);
     }
 
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [isRunning, timerMode, settings.pomodoroMinutes, settings.breakMinutes, settings.soundEnabled]);
+
+  // Listener for mobile screen wake / tab focus
+  useEffect(() => {
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible' && isRunningRef.current) {
+        const now = Date.now();
+        const elapsedSeconds = Math.floor((now - lastTickTimeRef.current) / 1000);
+        if (elapsedSeconds >= 1) {
+          lastTickTimeRef.current += elapsedSeconds * 1000;
+          processTimerTick(elapsedSeconds);
+        }
+      }
+    };
+
+    window.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+    return () => {
+      window.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [timerMode, settings.pomodoroMinutes, settings.breakMinutes]);
 
   // Quests progress helper
   const updateQuestsProgress = (minutesAdded: number) => {
@@ -318,6 +410,31 @@ export default function App() {
     setIsRunning(!isRunning);
   };
 
+  // Manual Log Stopwatch session
+  const handleLogStopwatchSession = () => {
+    if (stopwatchTime < 10) return;
+    const mins = Math.max(1, Math.round(stopwatchTime / 60));
+    logCompletedSession(stopwatchTime, 'stopwatch', mins * 2);
+    addLog(`Logged Stopwatch Session: ${mins}m for ${activeObjective}`, 'success');
+    setStopwatchTime(0);
+    setIsRunning(false);
+  };
+
+  // Log handlers for FocusStatisticsView
+  const handleDeleteLog = (id: string) => {
+    setSessionLogs((prev) => prev.filter((l) => l.id !== id));
+  };
+
+  const handleClearLogs = () => {
+    setSessionLogs([]);
+  };
+
+  const handleAddLog = (newLog: Omit<FocusSessionLog, 'id'>) => {
+    const logWithId: FocusSessionLog = { ...newLog, id: Date.now().toString() };
+    setSessionLogs((prev) => [logWithId, ...prev]);
+    addLog(`Manually logged session: ${newLog.taskName} (${newLog.durationMinutes}m)`, 'success');
+  };
+
   // Unlock Armory Item
   const handleUnlockItem = (item: ArmoryItem) => {
     if (xp < item.costXp) return;
@@ -353,6 +470,7 @@ export default function App() {
     setStreakDays(1);
     setArmoryItems(INITIAL_ARMORY_ITEMS);
     setQuests(INITIAL_QUESTS);
+    setSessionLogs(INITIAL_FOCUS_LOGS);
     setLogs([
       {
         id: Date.now().toString(),
@@ -420,9 +538,21 @@ export default function App() {
             onAddMinutes={handleAddMinutes}
             activeObjective={activeObjective}
             setActiveObjective={setActiveObjective}
+            taskCategory={taskCategory}
+            setTaskCategory={setTaskCategory}
+            onLogStopwatchSession={handleLogStopwatchSession}
             logs={logs}
             quests={quests}
             currentQuote={MOTIVATIONAL_QUOTES[quoteIndex]}
+          />
+        )}
+
+        {activeTab === 'analytics' && (
+          <FocusStatisticsView
+            sessionLogs={sessionLogs}
+            onDeleteLog={handleDeleteLog}
+            onClearLogs={handleClearLogs}
+            onAddLog={handleAddLog}
           />
         )}
 

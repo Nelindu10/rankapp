@@ -1,9 +1,9 @@
 import React from 'react';
-import { Rank } from '../types';
+import { Rank, TabType } from '../types';
 
 interface TopHeaderProps {
-  activeTab: 'dashboard' | 'armory' | 'squad' | 'barracks';
-  setActiveTab: (tab: 'dashboard' | 'armory' | 'squad' | 'barracks') => void;
+  activeTab: TabType;
+  setActiveTab: (tab: TabType) => void;
   currentRank: Rank;
   commanderName: string;
   avatarUrl: string;
@@ -51,6 +51,16 @@ export const TopHeader: React.FC<TopHeaderProps> = ({
             }`}
           >
             DASHBOARD
+          </button>
+          <button
+            onClick={() => setActiveTab('analytics')}
+            className={`font-display text-xl tracking-wider transition-all duration-200 active:scale-95 ${
+              activeTab === 'analytics'
+                ? 'text-[#4cd7f6] drop-shadow-[0_0_10px_rgba(76,215,246,0.8)] border-b-2 border-[#4cd7f6]'
+                : 'text-[#bcc9cd] hover:text-[#4cd7f6]'
+            }`}
+          >
+            ANALYTICS
           </button>
           <button
             onClick={() => setActiveTab('armory')}

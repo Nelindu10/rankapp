@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Rank, LogItem, QuestItem } from '../types';
+import { TASK_CATEGORIES } from '../constants';
 
 interface BattleGroundViewProps {
   currentRank: Rank;
@@ -17,6 +18,9 @@ interface BattleGroundViewProps {
   onAddMinutes: (mins: number) => void;
   activeObjective: string;
   setActiveObjective: (obj: string) => void;
+  taskCategory: string;
+  setTaskCategory: (cat: string) => void;
+  onLogStopwatchSession?: () => void;
   logs: LogItem[];
   quests: QuestItem[];
   currentQuote: string;
@@ -38,6 +42,9 @@ export const BattleGroundView: React.FC<BattleGroundViewProps> = ({
   onAddMinutes,
   activeObjective,
   setActiveObjective,
+  taskCategory,
+  setTaskCategory,
+  onLogStopwatchSession,
   logs,
   quests,
   currentQuote,
@@ -125,50 +132,88 @@ export const BattleGroundView: React.FC<BattleGroundViewProps> = ({
         </div>
       </section>
 
-      {/* Active Objective Banner */}
-      <div className="glass-panel p-4 rounded-xl flex flex-wrap items-center justify-between gap-4 border-l-4 border-[#4cd7f6]">
-        <div className="flex items-center gap-3">
-          <span className="material-symbols-outlined text-[#4cd7f6] text-xl">target</span>
-          <div>
-            <span className="text-[10px] font-mono-data uppercase text-[#bcc9cd] tracking-wider block">
-              ACTIVE OBJECTIVE
-            </span>
-            {isEditingObjective ? (
-              <form onSubmit={handleObjectiveSubmit} className="flex gap-2 mt-1">
-                <input
-                  type="text"
-                  value={tempObjective}
-                  onChange={(e) => setTempObjective(e.target.value)}
-                  className="bg-[#0e0e10] border border-[#4cd7f6] rounded px-3 py-1 text-sm text-[#e5e1e4] focus:outline-none"
-                  autoFocus
-                />
-                <button
-                  type="submit"
-                  className="px-3 py-1 bg-[#06b6d4] text-black font-bold text-xs rounded hover:bg-[#4cd7f6]"
-                >
-                  SAVE
-                </button>
-              </form>
-            ) : (
-              <span className="font-bold text-[#e5e1e4] text-sm md:text-base">
-                {activeObjective || 'General Tactical Study'}
+      {/* Active Objective & Category Selector Banner */}
+      <div className="glass-panel p-5 rounded-2xl space-y-3 border-l-4 border-[#4cd7f6]">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-3 flex-1 min-w-[260px]">
+            <span className="material-symbols-outlined text-[#4cd7f6] text-2xl shrink-0">target</span>
+            <div className="flex-1">
+              <span className="text-[10px] font-mono-data uppercase text-[#bcc9cd] tracking-wider block">
+                ACTIVE FOCUS TASK / OBJECTIVE
               </span>
-            )}
+              {isEditingObjective ? (
+                <form onSubmit={handleObjectiveSubmit} className="flex gap-2 mt-1">
+                  <input
+                    type="text"
+                    value={tempObjective}
+                    onChange={(e) => setTempObjective(e.target.value)}
+                    placeholder="Type Task Name e.g. Clean room, Coding..."
+                    className="bg-[#0e0e10] border border-[#4cd7f6] rounded-lg px-3 py-1.5 text-sm text-[#e5e1e4] focus:outline-none w-full max-w-md"
+                    autoFocus
+                  />
+                  <button
+                    type="submit"
+                    className="px-3.5 py-1.5 bg-[#06b6d4] text-black font-bold text-xs rounded-lg hover:bg-[#4cd7f6] shrink-0"
+                  >
+                    SAVE
+                  </button>
+                </form>
+              ) : (
+                <div className="flex items-center gap-3 mt-0.5">
+                  <span className="font-bold text-[#e5e1e4] text-base md:text-lg">
+                    {activeObjective || 'General Focus'}
+                  </span>
+                  <button
+                    onClick={() => {
+                      setTempObjective(activeObjective);
+                      setIsEditingObjective(true);
+                    }}
+                    className="text-xs font-mono-data text-[#4cd7f6] hover:underline flex items-center gap-1 cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-sm">edit</span>
+                    <span>EDIT</span>
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Stopwatch Log Session Button */}
+          {mode === 'stopwatch' && stopwatchTime >= 10 && onLogStopwatchSession && (
+            <button
+              onClick={onLogStopwatchSession}
+              className="px-4 py-2 bg-[#e9c400] text-[#3a3000] font-mono-data text-xs font-bold rounded-xl shadow-[0_0_12px_rgba(233,196,0,0.4)] hover:scale-105 active:scale-95 transition-all cursor-pointer flex items-center gap-1.5"
+            >
+              <span className="material-symbols-outlined text-sm">save</span>
+              <span>LOG SESSION ({Math.round(stopwatchTime / 60)}m)</span>
+            </button>
+          )}
         </div>
 
-        {!isEditingObjective && (
-          <button
-            onClick={() => {
-              setTempObjective(activeObjective);
-              setIsEditingObjective(true);
-            }}
-            className="text-xs font-mono-data text-[#4cd7f6] hover:underline flex items-center gap-1 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-sm">edit</span>
-            <span>CHANGE TARGET</span>
-          </button>
-        )}
+        {/* Quick Category Chips / Pills */}
+        <div className="pt-2 border-t border-[#3d494c]/40 flex items-center gap-2 overflow-x-auto custom-scrollbar pb-1">
+          <span className="text-[10px] font-mono-data uppercase text-[#bcc9cd] tracking-wider shrink-0 mr-1">
+            Category:
+          </span>
+          {TASK_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => {
+                setTaskCategory(cat);
+                if (!activeObjective || activeObjective === 'General Tactical Study' || activeObjective === 'General Focus') {
+                  setActiveObjective(`${cat} Session`);
+                }
+              }}
+              className={`px-3 py-1 rounded-lg text-xs font-mono-data transition-all cursor-pointer shrink-0 ${
+                taskCategory === cat
+                  ? 'bg-[#06b6d4] text-black font-extrabold shadow-[0_0_10px_rgba(76,215,246,0.6)]'
+                  : 'bg-[#201f21] text-[#bcc9cd] border border-[#3d494c]/60 hover:text-white hover:border-[#4cd7f6]/50'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Bento Grid Main Content */}

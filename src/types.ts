@@ -7,6 +7,19 @@ export interface Rank {
 }
 
 export type TimerMode = 'pomodoro' | 'break' | 'stopwatch';
+export type TabType = 'dashboard' | 'analytics' | 'armory' | 'squad' | 'barracks';
+
+export interface FocusSessionLog {
+  id: string;
+  taskName: string;
+  category: string;
+  startTime: number; // timestamp in ms
+  endTime: number; // timestamp in ms
+  durationMinutes: number;
+  durationSeconds: number;
+  earnedXp: number;
+  mode: 'pomodoro' | 'stopwatch';
+}
 
 export interface LogItem {
   id: string;

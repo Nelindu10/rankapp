@@ -1,9 +1,9 @@
 import React from 'react';
-import { Rank } from '../types';
+import { Rank, TabType } from '../types';
 
 interface SideNavBarProps {
-  activeTab: 'dashboard' | 'armory' | 'squad' | 'barracks';
-  setActiveTab: (tab: 'dashboard' | 'armory' | 'squad' | 'barracks') => void;
+  activeTab: TabType;
+  setActiveTab: (tab: TabType) => void;
   currentRank: Rank;
   nextRank: Rank | null;
   xp: number;
@@ -46,6 +46,18 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
         >
           <span className="material-symbols-outlined">timer</span>
           <span>Battle Ground</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('analytics')}
+          className={`w-full text-left p-4 flex items-center gap-4 transition-all duration-200 ease-in-out font-body font-bold uppercase text-sm tracking-wide ${
+            activeTab === 'analytics'
+              ? 'bg-[#6f00be]/80 text-[#d6a9ff] rounded-r-full border-l-4 border-[#ddb7ff] shadow-[0_0_15px_rgba(111,0,190,0.5)]'
+              : 'text-[#bcc9cd] hover:bg-[#2a2a2c]/60 hover:text-[#ddb7ff]'
+          }`}
+        >
+          <span className="material-symbols-outlined">insights</span>
+          <span>Focus Statistics</span>
         </button>
 
         <button
