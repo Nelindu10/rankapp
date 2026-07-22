@@ -1,0 +1,6 @@
+{
+  "name": "Elite Focus - Gamified Study Hub",
+  "description": "A high-octane gamified study hub with Pomodoro focus sessions, rank progression, armory unlocks, mission logs, and tactical career stats.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

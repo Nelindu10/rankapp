@@ -1,0 +1,168 @@
+import { Rank, ArmoryItem, QuestItem, SquadMember } from './types';
+
+export const RANKS: Rank[] = [
+  { name: 'Bronze', minXp: 0, icon: 'military_tech', color: 'text-amber-600', title: 'Recruit' },
+  { name: 'Silver', minXp: 100, icon: 'military_tech', color: 'text-slate-300', title: 'Vanguard' },
+  { name: 'Gold', minXp: 250, icon: 'military_tech', color: 'text-yellow-400', title: 'Specialist' },
+  { name: 'Platinum', minXp: 500, icon: 'verified', color: 'text-cyan-300', title: 'Commander' },
+  { name: 'Diamond', minXp: 1000, icon: 'diamond', color: 'text-blue-400', title: 'Apex Operative' },
+  { name: 'Heroic', minXp: 2000, icon: 'stars', color: 'text-purple-400', title: 'Grandmaster' },
+];
+
+export const INITIAL_ARMORY_ITEMS: ArmoryItem[] = [
+  {
+    id: 'visor_cyan',
+    name: 'Cyber Neon HUD',
+    category: 'Visor',
+    costXp: 0,
+    icon: 'visibility',
+    description: 'Standard issue tactical cyan visor with real-time target tracking overlay.',
+    unlocked: true,
+    equipped: true,
+  },
+  {
+    id: 'visor_purple',
+    name: 'Void Specter Matrix',
+    category: 'Visor',
+    costXp: 120,
+    icon: 'blur_on',
+    description: 'Electric purple quantum visor tuned to hyper-focus neural frequencies.',
+    unlocked: false,
+    equipped: false,
+  },
+  {
+    id: 'visor_gold',
+    name: 'Aegis MVP Crown',
+    category: 'Visor',
+    costXp: 300,
+    icon: 'crown',
+    description: 'Golden prestige visor reserved for top-tier study commanders.',
+    unlocked: false,
+    equipped: false,
+  },
+  {
+    id: 'title_elite',
+    name: 'Title: "Overdrive Operator"',
+    category: 'Title',
+    costXp: 50,
+    icon: 'badge',
+    description: 'Displays "Overdrive Operator" badge beside your name in squad rankings.',
+    unlocked: false,
+    equipped: false,
+  },
+  {
+    id: 'title_shadow',
+    name: 'Title: "Midnight Scholar"',
+    category: 'Title',
+    costXp: 150,
+    icon: 'dark_mode',
+    description: 'For those who conquer intense late-night study battles.',
+    unlocked: false,
+    equipped: false,
+  },
+  {
+    id: 'audio_synth',
+    name: 'Audio: Cyberpunk Pulse Synth',
+    category: 'Audio',
+    costXp: 80,
+    icon: 'graphic_eq',
+    description: 'Unlocks procedural cyberpunk ambient sound synthesizer during focus mode.',
+    unlocked: true,
+    equipped: true,
+  },
+  {
+    id: 'audio_rain',
+    name: 'Audio: Tactical Rain HUD',
+    category: 'Audio',
+    costXp: 100,
+    icon: 'rainy',
+    description: 'Calming high-altitude rain and wind acoustic masking.',
+    unlocked: false,
+    equipped: false,
+  },
+  {
+    id: 'theme_obsidian',
+    name: 'Theme: Deep Space Obsidian',
+    category: 'Theme',
+    costXp: 200,
+    icon: 'palette',
+    description: 'Supercharges background grid shaders with deep space nebulae.',
+    unlocked: false,
+    equipped: false,
+  },
+];
+
+export const INITIAL_QUESTS: QuestItem[] = [
+  {
+    id: 'q1',
+    title: 'First Battle Deployment',
+    targetMinutes: 25,
+    currentMinutes: 0,
+    xpReward: 30,
+    completed: false,
+  },
+  {
+    id: 'q2',
+    title: 'Centurion Grind (100 Minutes Focus)',
+    targetMinutes: 100,
+    currentMinutes: 0,
+    xpReward: 80,
+    completed: false,
+  },
+  {
+    id: 'q3',
+    title: 'Tactical Discipline (3 Completed Sessions)',
+    targetMinutes: 75,
+    currentMinutes: 0,
+    xpReward: 50,
+    completed: false,
+  },
+];
+
+export const INITIAL_SQUAD_MEMBERS: SquadMember[] = [
+  {
+    id: 's1',
+    name: 'Commander Alex',
+    rank: 'Platinum',
+    xp: 680,
+    hours: 14.5,
+    avatarUrl: 'https://images.unsplash.com/photo-1566492031773-4f4e44671857?w=150&auto=format&fit=crop&q=80',
+    status: 'In Battle',
+  },
+  {
+    id: 's2',
+    name: 'Vanguard Sarah',
+    rank: 'Gold',
+    xp: 420,
+    hours: 9.2,
+    avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    status: 'Tactical Break',
+  },
+  {
+    id: 's3',
+    name: 'Operator Marcus',
+    rank: 'Silver',
+    xp: 180,
+    hours: 4.1,
+    avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    status: 'Offline',
+  },
+  {
+    id: 's4',
+    name: 'Operative Cipher',
+    rank: 'Diamond',
+    xp: 1250,
+    hours: 28.0,
+    avatarUrl: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=150&auto=format&fit=crop&q=80',
+    status: 'In Battle',
+  },
+];
+
+export const MOTIVATIONAL_QUOTES = [
+  "Success is not final; failure is not fatal: it is the courage to continue that counts.",
+  "Pain is temporary. Victory in knowledge is eternal, Commander.",
+  "Discipline bridges the gap between ambitious goals and heroic accomplishments.",
+  "Maintain target lock on your study objectives. Distractions eliminated.",
+  "In the heat of battle, relentless preparation is your deadliest weapon.",
+  "Excellence is not an act, but a tactical habit executed daily."
+];
